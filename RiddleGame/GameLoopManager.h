@@ -6,6 +6,8 @@
 #include <fstream>
 
 #define QUIT "quit"
+#define USER_FILE "UserAccounts.csv"
+#define RIDDLE_FILE "Riddles.csv"
 
 class GameLoopManager
 {
@@ -22,6 +24,9 @@ public:
 		std::string RiddleName;
 		std::string RiddleQuestion;
 		std::string RiddleAnswer;
+		std::string Category;
+		std::string Difficulty;
+		std::string PointsGiven;
 		//int complexity 1, 2, 3;
 	};
 
@@ -46,16 +51,30 @@ public:
 	void DisplayHighscore();
 	void DisplayGameRules();
 	void GetUserAccountInfo();
-	void DisplayUsersNeatly(std::vector<GameLoopManager::UserAccountData> vec);
+	void DisplayUsersNeatly();
+	void DisplayRiddlesNeatly();
+	void ClearCinBuffer();
 	std::string GetUserInput();
 
 
+	int CheckIfUsernameIsTaken(struct GameLoopManager::UserAccountData User);
+	int CheckPinRequirments(struct GameLoopManager::UserAccountData User);
+	int CountLinesInCSV(const std::string filename);
+	int SaveUser(struct GameLoopManager::UserAccountData User);
+	int UpdateUser(struct GameLoopManager::UserAccountData User);
+
 	/*Vector(s)*/
 	//std::vector<GameLoopManager::RiddleData> RiddleVector;
-	std::vector<GameLoopManager::RiddleData> AppendRiddlesToVector(std::string filename, const int lineCount);
-	std::vector<GameLoopManager::UserAccountData> AppendUserAccountsToVector(std::string filename, const int lineCount);
+	std::vector<GameLoopManager::RiddleData> GetAllRiddles();
+	std::vector<GameLoopManager::UserAccountData> GetAllRegisteredUsers();
 
-	int CountRiddlesInCSV(const std::string filename);
+	
 	std::vector<GameLoopManager::RiddleData> RiddleVector;
+
+	//Typedefs
+
+
+	//typedef std::vector<GameLoopManager::UserAccountData> userVec;
+	//typedef std::vector<GameLoopManager::RiddleData> ridVec;
 };
 

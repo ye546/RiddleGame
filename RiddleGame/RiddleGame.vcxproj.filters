@@ -27,4 +27,8 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Riddles.csv" />
+    <None Include="UserAccounts.csv" />
+  </ItemGroup>
 </Project>

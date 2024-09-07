@@ -4,10 +4,11 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
+#include <limits>
 
 GameLoopManager::GameLoopManager() 
 {
-	
+	//Start();
 }
 
 GameLoopManager::~GameLoopManager() 
@@ -94,82 +95,61 @@ void GameLoopManager::PlayAsGuest()
 	ClearScreen();
 }
 
-void GameLoopManager::RegisterNewUser()
+void GameLoopManager::RegisterNewUser() //TODO fix this fucking function..
 {
-	ClearScreen();
-
-	//get all users
-	struct UserAccountData new_user;
-	int AmountOfUsers = 0; //user counter
-	std::vector<GameLoopManager::UserAccountData> CurrentUsers = AppendUserAccountsToVector("UserAccounts.csv", AmountOfUsers);
-
-	Print("--- Create a new user ---");
-	PrintNL(1);
-	Print("Give a username: ");
-	new_user.name = GetUserInput();
-	PrintNL(1);
-	Print("Set a security pin for your user account.\n");
-	Print("Security pin requirments are:\n");
-	Print("1. Can be anything\n");
-	Print("2. Must be 8 chars long\n");
-	Print("Enter pin: "); 
-	retry_pin:
-	new_user.pincode = GetUserInput();
+	//CLS & buffer
 	
-	//Check if useraccount already is taken
-	if (!(CurrentUsers.empty()))
-	{
-		bool taken = 0;
-		
-		for (auto& users : CurrentUsers)
-		{
-			if (users.name == new_user.name)
-			{
-				Print("The given username is already taken, please try again.");
-				taken = 1;
-				break;
-			}
-			else
-				break;
-		}
+	//	TODO
+	//	1. Fix reading current users so no duplicates can be made - DONE
+	//	2. Fix pin requirment check - it's fucked - DONE
+	//	3. Improve case sensitivity and perhaps introduce an ID-system to allow users with the same names...
+	
 
-		//Restart the account registration
-		if(taken)
-			RegisterNewUser();
+	//Create the new user object
+	struct UserAccountData NewUser;
+	int CheckSum = 0;
+
+	Print("Set a username: "); std::getline(std::cin, NewUser.name);
+	if (CheckSum = CheckIfUsernameIsTaken(NewUser) == 1)
+	{
+		Print("Username is already taken, try again(press any key to continue)...");
+
+		ClearCinBuffer();
+		RegisterNewUser();
+		return;
 	}
 
-	//Check if pin meets requirments
-	if (!(new_user.pincode.length() < 8 || new_user.pincode.length() > 8))
+	Print("Set a pincode (requirment: >=4 and <=12: "); std::getline(std::cin, NewUser.pincode);
+	if (CheckSum = CheckPinRequirments(NewUser) == 1)
 	{
-		Print("The pincode does not match the requirments, try again:");
-		new_user.pincode = "";
-		goto retry_pin;
+		Print("Pincode has too few characters, try again(press any key to continue)...");
+		ClearCinBuffer();
+		RegisterNewUser();
+		return;
 	}
-
-	//verify
-	/*Print("You are about to create a new account:");
-	Print("Name: "); Print(new_user.name);
-	Print("Pincode: "); Print(new_user.pincode);
-	PrintNL(2);
-	Print("confirm? (yes/no) Y/N");
-	std::string confirm = GetUserInput();
-
-	if()*/
+	else if (CheckSum = CheckPinRequirments(NewUser) == 2)
+	{
+		Print("Pincode has too many characters, try again(press any key to continue)...");
+		ClearCinBuffer();
+		RegisterNewUser();
+		return;
+	}
 
 	Print("Useraccount created.\n");
-	Print(new_user.name);
-	Print(new_user.pincode);
+
 
 	//set default points to 0
-	new_user.points = "0";
 
 	//Save the new user to UserAccounts.csv
 	std::fstream NewUserAccount("UserAccounts.csv", std::fstream::app);
+	std::string temp = NewUser.name + ";" + NewUser.pincode + ";" + "0" + "\n";
+	if (NewUserAccount.is_open())
+	{
+		NewUserAccount << temp;
 
-	NewUserAccount << new_user.name << ";" << new_user.pincode << ";" << new_user.points << "\n";
-	
+	}
+	//Close the file:
 	NewUserAccount.close();
-
 }
 
 //prints \n
@@ -189,7 +169,7 @@ std::string GameLoopManager::GetUserInput()
 {
 	std::string input;
 	std::getline(std::cin, input);
-
+	std::cin.ignore();
 	return input;
 }
 
@@ -216,10 +196,13 @@ void GameLoopManager::GetUserAccountInfo()
 void GameLoopManager::ClearScreen()
 {
 	std::cout << "\033[2J\033[1;1H"; // ANSI escape code to clear screen;
-	std::cin.ignore(); //clear buffer
+	//std::cin.clear(); //clear buffer
+// Limit the use of std::numeric_limits to the local scope
+//using std::numeric_limits; // Import numeric_limits into local scope
+	//std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
 
-int GameLoopManager::CountRiddlesInCSV(const std::string filename) 
+int GameLoopManager::CountLinesInCSV(const std::string filename) 
 {
 	std::ifstream file(filename);
 	int lineCount = 0;
@@ -244,9 +227,10 @@ int GameLoopManager::CountRiddlesInCSV(const std::string filename)
 }
 
 //Load riddles
-std::vector<GameLoopManager::RiddleData> GameLoopManager::AppendRiddlesToVector(std::string filename, const int lineCount) 
+std::vector<GameLoopManager::RiddleData> GameLoopManager::GetAllRiddles()
 {
-	
+	std::string filename = RIDDLE_FILE;
+	int lineCount = CountLinesInCSV(filename);
 	//variables
 	std::fstream RiddleFile(filename, std::fstream::in); // I/O to open the CSV-file with all the riddles.
 	std::vector<GameLoopManager::RiddleData> RiddleVector;
@@ -258,7 +242,10 @@ std::vector<GameLoopManager::RiddleData> GameLoopManager::AppendRiddlesToVector(
 			GameLoopManager:RiddleData riddle;
 			std::getline(RiddleFile, riddle.RiddleName, ';');
 			std::getline(RiddleFile, riddle.RiddleQuestion, ';');
-			std::getline(RiddleFile, riddle.RiddleAnswer, '\n');
+			std::getline(RiddleFile, riddle.RiddleAnswer, ';');
+			std::getline(RiddleFile, riddle.Category, ';');
+			std::getline(RiddleFile, riddle.Difficulty, ';');
+			std::getline(RiddleFile, riddle.PointsGiven, '\n');
 
 			if (RiddleFile.eof() || RiddleFile.fail()) 
 			{
@@ -272,12 +259,16 @@ std::vector<GameLoopManager::RiddleData> GameLoopManager::AppendRiddlesToVector(
 	return RiddleVector;
 }
 
-std::vector<GameLoopManager::UserAccountData> GameLoopManager::AppendUserAccountsToVector(std::string filename, const int lineCount)
+std::vector<GameLoopManager::UserAccountData> GameLoopManager::GetAllRegisteredUsers()
 {
-
-	//variables
+	std::string filename = USER_FILE;
+	//Read all accounts from master file
 	std::fstream UserAccountData(filename, std::fstream::in); // I/O to open the CSV-file with all the riddles.
-	std::vector<GameLoopManager::UserAccountData> UserAccountVector;
+	
+	//Create a vector of UserAccountData to read all accounts
+	std::vector<GameLoopManager::UserAccountData> Users;
+
+	int lineCount = CountLinesInCSV(filename);
 
 	if (lineCount != -1 && UserAccountData.is_open())
 	{
@@ -293,15 +284,17 @@ std::vector<GameLoopManager::UserAccountData> GameLoopManager::AppendUserAccount
 				break; // Exit the loop if we reach the end of the file or encounter an error
 			}
 
-			UserAccountVector.push_back(account_data);
+			Users.push_back(account_data);
 		}
 	}
 
-	return UserAccountVector;
+	return Users;
 }
 
-void GameLoopManager::DisplayUsersNeatly(std::vector<GameLoopManager::UserAccountData> vec)
+void GameLoopManager::DisplayUsersNeatly()
 {
+	std::vector<GameLoopManager::UserAccountData> vec = GetAllRegisteredUsers();
+	
 	//always remove first input
 	if (!vec.empty())
 		vec.front() = std::move(vec.back()); vec.pop_back();
@@ -323,4 +316,126 @@ void GameLoopManager::DisplayUsersNeatly(std::vector<GameLoopManager::UserAccoun
 		Print("------------");
 		PrintNL(1);
 	}
+}
+
+//TODO: Fix this function, it displays last riddle as first, think the "remove first input" is fucked?
+void GameLoopManager::DisplayRiddlesNeatly()
+{
+	std::vector<GameLoopManager::RiddleData> vec = GetAllRiddles();
+	
+	//always remove first input
+	if (!vec.empty())
+		vec.front() = std::move(vec.back()); vec.pop_back();
+
+	Print("--- All riddles ---");
+	PrintNL(1);
+
+	for (auto& t : vec)
+	{
+		Print("Riddle name: ");
+		Print(t.RiddleName);
+		PrintNL(1);
+		Print("Riddle question: ");
+		Print(t.RiddleQuestion);
+		PrintNL(1);
+		Print("Riddle answer: ");
+		Print(t.RiddleAnswer);
+		PrintNL(1);
+		Print("Category: ");
+		Print(t.Category);
+		PrintNL(1);
+		Print("Difficulty: ");
+		Print(t.Difficulty);
+		PrintNL(1);
+		Print("pointsGiven: ");
+		Print(t.PointsGiven);
+		PrintNL(1);
+
+		Print("------------");
+		PrintNL(1);
+	}
+}
+
+int GameLoopManager::CheckIfUsernameIsTaken(struct GameLoopManager::UserAccountData User)
+{
+	std::vector<GameLoopManager::UserAccountData> CurrentUsers = GetAllRegisteredUsers();
+
+	for (auto& t : CurrentUsers)
+	{
+		if (t.name == User.name)
+		{
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+int GameLoopManager::CheckPinRequirments(struct GameLoopManager::UserAccountData User)
+{
+	/*std::string* buf[sizeof(std::string) / sizeof(User.pincode)];
+
+	for (auto& c : buf)
+	{
+		if(c)
+	}
+	*/
+
+	if (User.pincode.length() < 4)
+	{
+		return 1;
+	}
+	else if (User.pincode.length() > 12)
+	{
+		return 2;
+	}
+
+	return 0;
+}
+
+void GameLoopManager::ClearCinBuffer()
+{
+	std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+}
+
+int GameLoopManager::UpdateUser(struct GameLoopManager::UserAccountData User)
+{
+	//TODO: find the users line-pos in the csv-file and replace with updated data.
+	
+	
+	//Look for the user in the database
+	std::vector<GameLoopManager::UserAccountData> AllUsers = GetAllRegisteredUsers();
+	
+	for (auto& u : AllUsers)
+	{
+		if (u.name == User.name)
+		{
+			u.points = User.points;
+		}
+	}
+
+	//Update the position in the csv-file
+	std::ifstream file(USER_FILE);
+	int lineCount = 0;
+
+	if (!file.is_open()) {
+		//std::cout << "Error opening file: " << filename << std::endl;
+		return -1;
+	}
+	else
+	{
+		//std::cout << "opening file: " << filename << std::endl;
+		//std::string line;
+		//while (std::getline(file, line)) {
+		//	if(line.)
+		//	++lineCount;
+		//}
+		//std::cout << "closing file: " << filename << std::endl;
+		//std::cout << "file line counter: " << lineCount << std::endl;
+		file.close();
+	}
+
+	return lineCount;
+
+	std::fstream();
 }

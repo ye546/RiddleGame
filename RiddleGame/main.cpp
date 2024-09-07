@@ -5,6 +5,11 @@
 
 int main()
 {
-	GameLoopManager Handle;
 	
+	GameLoopManager Handle;
+
+	//Handle.Print("Press any key to start...");
+
+	Handle.RegisterNewUser();
+
 }
